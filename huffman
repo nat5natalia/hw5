@@ -1,0 +1,109 @@
+#include<iostream>
+#include<fstream>
+#include<vector>
+#include<map>
+#include<algorithm>
+#include<string>
+
+using namespace std;
+
+struct Node {
+    char data;
+    int frequency;
+    Node* left;
+    Node* right;
+
+    Node(char d, int f) : data(d), frequency(f), left(nullptr), right(nullptr) {}
+};
+
+bool compare(Node* n1, Node* n2) {
+    return n1->frequency > n2->frequency;
+}
+
+class Huffman {
+private:
+    vector<Node*> nodes;
+    Node* root;
+    map<char, string> codes;
+
+    void buildHuffmanTree() {
+        while (nodes.size() > 1) {
+            sort(nodes.begin(), nodes.end(), compare);
+
+            Node* left = nodes[nodes.size() - 1];
+            Node* right = nodes[nodes.size() - 2];
+
+            Node* parent = new Node('$', left->frequency + right->frequency);
+            parent->left = left;
+            parent->right = right;
+
+            nodes.pop_back();
+            nodes.pop_back();
+            nodes.push_back(parent);
+        }
+
+        root = nodes.front();
+    }
+
+    void generateCodes(Node* root, string code) {
+        if (root->data != '$') {
+            codes[root->data] = code;
+        }
+        else {
+            generateCodes(root->left, code + "0");
+            generateCodes(root->right, code + "1");
+        }
+    }
+
+public:
+    Huffman() : root(nullptr) {}
+
+    void buildHuffmanTreeFromFile(string fileName) {
+        ifstream file(fileName);
+        if (!file.is_open()) {
+            cout << "Failed to open file." << endl;
+            return;
+        }
+
+        map<char, int> charFrequency;
+
+        char c;
+        while (file.get(c)) {
+            charFrequency[c]++;
+        }
+
+        for (auto& entry : charFrequency) {
+            nodes.push_back(new Node(entry.first, entry.second));
+        }
+
+        buildHuffmanTree();
+        generateCodes(root, "");
+
+        file.clear();
+        file.seekg(0, ios::beg);
+
+        ofstream outputFile("encoded_" + fileName);
+        for (auto& entry : codes) {
+            outputFile << entry.first << " " << entry.second << endl;
+            cout << entry.first << " " << entry.second << endl;
+        }
+
+        string encoded;
+        while (file.get(c)) {
+            encoded += codes[c];
+        }
+
+        outputFile << encoded;
+
+        file.close();
+    }
+};
+
+int main() {
+    Huffman huffman;
+    huffman.buildHuffmanTreeFromFile("input.txt");
+
+    cout << "Encoding completed. Encoded file created." << endl;
+
+    return 0;
+}
